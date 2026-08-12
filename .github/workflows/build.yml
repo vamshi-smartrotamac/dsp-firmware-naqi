@@ -1,0 +1,16 @@
+name: Build
+on:
+  pull_request:
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build toolchain image
+        run: docker build -t dsp-firmware-sm-toolchain -f docker/max78000/Dockerfile .
+      - name: make (debug)
+        run: docker run --rm -v "$PWD":/work -w /work dsp-firmware-sm-toolchain make -j BOARD=FTHR_RevA
+      - name: make release
+        run: docker run --rm -v "$PWD":/work -w /work dsp-firmware-sm-toolchain make release BOARD=FTHR_RevA

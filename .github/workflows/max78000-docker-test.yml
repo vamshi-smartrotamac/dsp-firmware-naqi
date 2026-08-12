@@ -1,0 +1,23 @@
+name: Build docker image
+# Triggered when Dockerfile-related changes are made in a PR.
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - docker/max78000/Dockerfile
+      - .github/workflows/max78000-docker-test.yml
+
+jobs:
+  build-container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build container
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/max78000/Dockerfile
+          push: false
