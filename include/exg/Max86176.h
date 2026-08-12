@@ -94,4 +94,4 @@ int8_t MAX86176_readSample(int32_t *sample);
  */
 void MAX86176_getLeadOffData(int32_t *iValue, int32_t *qValue, uint8_t *status);
 
-#endif // MAX86176_H
+#endif  // MAX86176_H

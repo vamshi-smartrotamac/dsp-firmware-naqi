@@ -14,57 +14,52 @@
 #include <string.h>
 #include "FreeRTOS.h"
 #include "limits.h"
+#include "queue.h"
 #include "task.h"
 #include "timers.h"
-#include "queue.h"
 
 #include "ExGacquisition.h"
-#include "logger.h"
+#include "ExGacquisitionInterface.h"
 #include "GestureProcessing.h"
 #include "filtering_application.h"
-#include "ExGacquisitionInterface.h"
+#include "logger.h"
 
 /* Private typedef -----------------------------------------------------------*/
 
 /* Private define ------------------------------------------------------------*/
 
 /* Private macro -------------------------------------------------------------*/
-#define PEAK_TO_PEAK_THRESHOLD 500 // (uV)
-#define SLIDING_WINDOW_STEP (1000 * 25 / 256)    // (ms)
-#define FILTERED_BUFFER_SIZE (SLIDING_WINDOW_STEP / SAMPLE_PERIOD)
-#define JC_TIMER_EVENT (1 << 0)
-#define GESTURE_QUEUE_DEPTH 1
+#define PEAK_TO_PEAK_THRESHOLD 500                // (uV)
+#define SLIDING_WINDOW_STEP    (1000 * 25 / 256)  // (ms)
+#define FILTERED_BUFFER_SIZE   (SLIDING_WINDOW_STEP / SAMPLE_PERIOD)
+#define JC_TIMER_EVENT         (1 << 0)
+#define GESTURE_QUEUE_DEPTH    1
 
 /* Global variables ----------------------------------------------------------*/
-static TaskHandle_t processingTaskHandle = NULL;
+static TaskHandle_t  processingTaskHandle = NULL;
 static TimerHandle_t slidingWindowStepTimerHandle = NULL;
 static TimerHandle_t memorySystemTimerHandle = NULL;
 static QueueHandle_t xGestureQueue = NULL;
-static float arrayPreprocessedData[JC_PROCESSING_SIZE_WINDOW_FINAL];
-static bool pausedByMemorySystem = false;
+static float         arrayPreprocessedData[JC_PROCESSING_SIZE_WINDOW_FINAL];
+static bool          pausedByMemorySystem = false;
 
 // Number of voters for the defined gestures
 static const uint8_t jcConsecutivePredictionTarget[] = {
-    0,                                            // Padding value because gestures start at 1
-    JC_PROCESSING_CONSECUTIVE_PREDICTIONS_DOUBLE, // JC CLASS DOUBLE (1)
-    JC_PROCESSING_CONSECUTIVE_PREDICTIONS_TRIPLE, // JC CLASS TRIPLE (2)
-    JC_PROCESSING_CONSECUTIVE_PREDICTIONS_SINGLE  // JC CLASS SINGLE (3)
+    0,                                             // Padding value because gestures start at 1
+    JC_PROCESSING_CONSECUTIVE_PREDICTIONS_DOUBLE,  // JC CLASS DOUBLE (1)
+    JC_PROCESSING_CONSECUTIVE_PREDICTIONS_TRIPLE,  // JC CLASS TRIPLE (2)
+    JC_PROCESSING_CONSECUTIVE_PREDICTIONS_SINGLE   // JC CLASS SINGLE (3)
 };
 
 // EXG packet gesture_out mapping
 static const uint8_t protocolGestureMap[] = {
-    0, // Padding value because gestures start at 1
-    2, // JC CLASS DOUBLE (1)
-    3, // JC CLASS TRIPLE (2)
-    1  // JC CLASS SINGLE (3)
+    0,  // Padding value because gestures start at 1
+    2,  // JC CLASS DOUBLE (1)
+    3,  // JC CLASS TRIPLE (2)
+    1   // JC CLASS SINGLE (3)
 };
 
-static const char* const gestureName[] = {
-    "No gesture",
-    "DJC",
-    "TJC",
-    "SJC"
-};
+static const char *const gestureName[] = {"No gesture", "DJC", "TJC", "SJC"};
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -105,7 +100,7 @@ static void computePrediction(void)
 {
     static uint8_t previousPrediction = 0;
     static uint8_t consecutivePredictionsCpt = 0;
-    uint8_t currentPrediction = 0;
+    uint8_t        currentPrediction = 0;
 
     // Thresholding
     if (!AfeItf_isThresholdReached(arrayPreprocessedData, JC_PROCESSING_SIZE_WINDOW_FINAL, PEAK_TO_PEAK_THRESHOLD))
@@ -153,7 +148,8 @@ int8_t Gproc_initProcessing(void)
 {
     if (jc_processing_initialize() < 0)
     {
-        NAQILOG_ERROR("JC processing initialization failed!\r"); // TODO: Fix condition when JC_initialize return code is consistent
+        NAQILOG_ERROR("JC processing initialization failed!\r");  // TODO: Fix condition when JC_initialize return code
+                                                                  // is consistent
     }
 
     // Synchronisation resources creation
@@ -212,7 +208,7 @@ uint8_t Gproc_getGesture(void)
  */
 void Gproc_runProcessingTask(void *pvParameters)
 {
-    uint32_t notifiedValue = 0;
+    uint32_t     notifiedValue = 0;
     static float arrayInputWindow[JC_PROCESSING_SIZE_WINDOW_INPUT];
 
     NAQILOG_INFO("Processing task launched\r");
@@ -234,7 +230,7 @@ void Gproc_runProcessingTask(void *pvParameters)
             // If at least one processing feature is enabled
             if (notifiedValue & JC_TIMER_EVENT)
             {
-            	Exg_copyFloatAFESamples(arrayInputWindow, JC_PROCESSING_SIZE_WINDOW_INPUT,
+                Exg_copyFloatAFESamples(arrayInputWindow, JC_PROCESSING_SIZE_WINDOW_INPUT,
                                         JC_PROCESSING_SIZE_WINDOW_INPUT);
 
                 if (fltr_app_runFilteringEMG(arrayInputWindow, JC_PROCESSING_SIZE_WINDOW_INPUT) < 0)
@@ -243,7 +239,7 @@ void Gproc_runProcessingTask(void *pvParameters)
                 }
                 // Preprocessing
                 else if (jc_processing_runPreprocessing(arrayInputWindow, JC_PROCESSING_SIZE_WINDOW_INPUT,
-                                                   arrayPreprocessedData, JC_PROCESSING_SIZE_WINDOW_FINAL) < 0)
+                                                        arrayPreprocessedData, JC_PROCESSING_SIZE_WINDOW_FINAL) < 0)
                 {
                     NAQILOG_ERROR("JC preprocessing failed!");
                 }

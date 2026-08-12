@@ -1,0 +1,14 @@
+name: clang Check
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+# Reuses the shared clang-format check (BLOCKING). src/ and include/ are formatted
+# to the team .clang-format (clang-format 15), so this passes. Library trees excluded.
+jobs:
+  format:
+    uses: vamshi-smartrotamac/max78000-ci-workflows/.github/workflows/firmware-clang-format-check.yml@main
+    with:
+      check-paths: "."
+      include-regex: '^\./(src|include)/.*\.(c|cc|cpp|h|hpp)$'
+      exclude-regex: '(build|firmware-library-processing|tensorflow-lite-microcontrollers)/'

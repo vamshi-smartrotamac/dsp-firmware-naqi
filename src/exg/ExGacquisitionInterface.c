@@ -84,23 +84,25 @@ void AfeItf_getLeadOffData(int32_t *iValue, int32_t *qValue, uint8_t *status)
     MAX86176_getLeadOffData(iValue, qValue, status);
 }
 
-bool AfeItf_isThresholdReached(float *ptrDataBuffer, uint16_t bufferSize,
-                               uint32_t threshold)
+bool AfeItf_isThresholdReached(float *ptrDataBuffer, uint16_t bufferSize, uint32_t threshold)
 {
     float min = ptrDataBuffer[0], max = ptrDataBuffer[0];
 
     // The threshold is a difference so we need to compute the difference with
     // the ADC count of 0 to get rid of a potential offset.
-    threshold = MAX86176_convertMicroVoltToADC(threshold)
-            - MAX86176_convertMicroVoltToADC(0);
+    threshold = MAX86176_convertMicroVoltToADC(threshold) - MAX86176_convertMicroVoltToADC(0);
 
-    for (uint16_t i = 0; i < bufferSize; i++) {
-        if (ptrDataBuffer[i] < min) {
+    for (uint16_t i = 0; i < bufferSize; i++)
+    {
+        if (ptrDataBuffer[i] < min)
+        {
             min = ptrDataBuffer[i];
-        } else if (ptrDataBuffer[i] > max) {
+        }
+        else if (ptrDataBuffer[i] > max)
+        {
             max = ptrDataBuffer[i];
         }
     }
 
-    return ((uint32_t) (max - min) > threshold);
+    return ((uint32_t)(max - min) > threshold);
 }

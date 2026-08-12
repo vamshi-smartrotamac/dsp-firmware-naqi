@@ -9,19 +9,18 @@
  *
  */
 
+#include "Communication.h"
+#include "SPI_Driver.h"
+#include "SystemServices.h"
+#include "board.h"
+#include "board_init.h"
+#include "i2c_driver.h"
 #include "logger.h"
 #include "mxc_device.h"
-#include "SystemServices.h"
-#include "SPI_Driver.h"
-#include "Communication.h"
-#include "i2c_driver.h"
-#include "board_init.h"
-#include "board.h"
 
 /* Stringification macros */
-#define STRING(x) STRING_(x)
+#define STRING(x)  STRING_(x)
 #define STRING_(x) #x
-
 
 /*
  * Function Prototype declarations
@@ -41,10 +40,10 @@ int main(void)
 
     Gpio_initialization();
 
-	/* Initialize the UART0 to communicate with QCC5141 */
-	UART_Initialization(UART0);
+    /* Initialize the UART0 to communicate with QCC5141 */
+    UART_Initialization(UART0);
 
-	/* Initialize the SPI0 to acquire data from ExG */
+    /* Initialize the SPI0 to acquire data from ExG */
     SPI_Initialization(MXC_SPI0);
 
     /* Initialize I2C peripheral */

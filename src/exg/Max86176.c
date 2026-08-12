@@ -10,211 +10,210 @@
  **************************************************************************/
 
 /* Includes ------------------------------------------------------------------*/
-#include <stddef.h>
 #include "Max86176.h"
+#include <stddef.h>
 #include "SPI_Driver.h"
 #include "logger.h"
 #include "mxc_delay.h"
 
 /* Private define ------------------------------------------------------------*/
-#define EXG_TAG_MASK 0xFC
-#define EXG_TAG_AUTO 0xC0
-#define EXG_TAG_LEADOFF_I 0xE0
-#define EXG_TAG_LEADOFF_Q 0xE4
+#define EXG_TAG_MASK                    0xFC
+#define EXG_TAG_AUTO                    0xC0
+#define EXG_TAG_LEADOFF_I               0xE0
+#define EXG_TAG_LEADOFF_Q               0xE4
 
-#define MAX86176_FIFO_OVF_COUNT_MASK 0x7F
-#define MAX86176_FIFO_COUNT_MSB_MASK 0x80
-#define MAX86176_SAMPLE_MSB_MASK 0x03
-#define MAX86176_SAMPLE_SIGN_BIT (1UL << 17) // sign bit of the 18-bit signed sample
-#define MAX86176_SAMPLE_SIZE (3)
+#define MAX86176_FIFO_OVF_COUNT_MASK    0x7F
+#define MAX86176_FIFO_COUNT_MSB_MASK    0x80
+#define MAX86176_SAMPLE_MSB_MASK        0x03
+#define MAX86176_SAMPLE_SIGN_BIT        (1UL << 17)  // sign bit of the 18-bit signed sample
+#define MAX86176_SAMPLE_SIZE            (3)
 
-#define MAX86176_LEADOFF_SIGN_BIT (1UL << 11) // sign bit of the 12-bit signed lead-off sample
+#define MAX86176_LEADOFF_SIGN_BIT       (1UL << 11)  // sign bit of the 12-bit signed lead-off sample
 #define MAX86176_LEADOFF_INIT_MAGNITUDE (2047)
-#define MAX86176_STATUS6_AC_LOFF_MASK 0x20
+#define MAX86176_STATUS6_AC_LOFF_MASK   0x20
 
-#define MAX86176_PARTID_EXPECTED (0x39)
+#define MAX86176_PARTID_EXPECTED        (0x39)
 
-#define MAX86176_ECG_ADC_MAX_COUNT (1UL << 17) // 18-bit signed ADC -> 2^17 full-scale magnitude
-#define MAX86176_ECG_VREF_uV (1000000UL)       // 1000 mV reference
+#define MAX86176_ECG_ADC_MAX_COUNT      (1UL << 17)  // 18-bit signed ADC -> 2^17 full-scale magnitude
+#define MAX86176_ECG_VREF_uV            (1000000UL)  // 1000 mV reference
 
-#define MAX86176_ECG_PGA_GAIN_FIELD (0x0) // ECG_PGA_GAIN[2:0], bits[6:4] -> see pgaGain table
-#define MAX86176_ECG_INA_GAIN_FIELD (0x0) // ECG_INA_GAIN[1:0], bits[1:0] -> see inaGain table
+#define MAX86176_ECG_PGA_GAIN_FIELD     (0x0)  // ECG_PGA_GAIN[2:0], bits[6:4] -> see pgaGain table
+#define MAX86176_ECG_INA_GAIN_FIELD     (0x0)  // ECG_INA_GAIN[1:0], bits[1:0] -> see inaGain table
 
 /* Register addresses ---------------------------------------------------------*/
 // PART ID //
-#define MAX86176_PARTID_ADDRESS 0xFF
+#define MAX86176_PARTID_ADDRESS         0xFF
 
 // ECG SETUP REGISTERS //
-#define MAX86176_ECG_CONFIG1 0x90
-#define MAX86176_ECG_CONFIG2 0x91
-#define MAX86176_ECG_CONFIG3 0x92
+#define MAX86176_ECG_CONFIG1            0x90
+#define MAX86176_ECG_CONFIG2            0x91
+#define MAX86176_ECG_CONFIG3            0x92
 
 // ECG LEAD DETECT REGISTERS //
-#define MAX86176_LEADDETECT_CONFIG1 0x93
-#define MAX86176_LEADDETECT_CONFIG2 0x94
+#define MAX86176_LEADDETECT_CONFIG1     0x93
+#define MAX86176_LEADDETECT_CONFIG2     0x94
 #define MAX86176_AC_LEADDETECT_WAVEFORM 0x95
-#define MAX86176_DC_LEADDETECT_DAC 0x96
-#define MAX86176_DC_LEADOFF_THRESHOLD 0x97
-#define MAX86176_AC_LEADOFF_THRESHOLD1 0x98
-#define MAX86176_AC_LEADOFF_THRESHOLD2 0x99
-#define MAX86176_AC_LEADOFF_PGA_HPF 0x9A
-#define MAX86176_AC_LEADOFF_CALIBRES 0x9B
+#define MAX86176_DC_LEADDETECT_DAC      0x96
+#define MAX86176_DC_LEADOFF_THRESHOLD   0x97
+#define MAX86176_AC_LEADOFF_THRESHOLD1  0x98
+#define MAX86176_AC_LEADOFF_THRESHOLD2  0x99
+#define MAX86176_AC_LEADOFF_PGA_HPF     0x9A
+#define MAX86176_AC_LEADOFF_CALIBRES    0x9B
 
 // ECG LEAD BIAS //
-#define MAX86176_LEADBIAS_CONFIG1 0x9E
+#define MAX86176_LEADBIAS_CONFIG1       0x9E
 
 // ECG CALIBRATION //
-#define MAX86176_CAL_CONFIG1 0xA0
-#define MAX86176_CAL_CONFIG2 0xA1
-#define MAX86176_CAL_CONFIG3 0xA2
+#define MAX86176_CAL_CONFIG1            0xA0
+#define MAX86176_CAL_CONFIG2            0xA1
+#define MAX86176_CAL_CONFIG3            0xA2
 
 // ECG RLD AND CM AMPS //
-#define MAX86176_RLD_CONFIG1 0xA8
-#define MAX86176_RLD_CONFIG2 0xA9
+#define MAX86176_RLD_CONFIG1            0xA8
+#define MAX86176_RLD_CONFIG2            0xA9
 
 // STATUS REGISTERS //
-#define MAX86176_STATUS1 0x00
-#define MAX86176_STATUS2 0x01
-#define MAX86176_STATUS3 0x02
-#define MAX86176_STATUS4 0x03
-#define MAX86176_STATUS5 0x04
-#define MAX86176_STATUS6 0x05
+#define MAX86176_STATUS1                0x00
+#define MAX86176_STATUS2                0x01
+#define MAX86176_STATUS3                0x02
+#define MAX86176_STATUS4                0x03
+#define MAX86176_STATUS5                0x04
+#define MAX86176_STATUS6                0x05
 
 // FIFO REGISTERS //
-#define MAX86176_FIFOWRITEPTR 0x08
-#define MAX86176_FIFOREADPTR 0x09
-#define MAX86176_FIFOCOUNTER1 0x0A
-#define MAX86176_FIFOCOUNTER2 0x0B
-#define MAX86176_FIFODATA 0x0C
-#define MAX86176_FIFOCONFIG1 0x0D
-#define MAX86176_FIFOCONFIG2 0x0E
+#define MAX86176_FIFOWRITEPTR           0x08
+#define MAX86176_FIFOREADPTR            0x09
+#define MAX86176_FIFOCOUNTER1           0x0A
+#define MAX86176_FIFOCOUNTER2           0x0B
+#define MAX86176_FIFODATA               0x0C
+#define MAX86176_FIFOCONFIG1            0x0D
+#define MAX86176_FIFOCONFIG2            0x0E
 
 // SYSTEM CONTROL REGISTERS //
-#define MAX86176_SYSTEMCONFIG1 0x10
-#define MAX86176_SYSTEMCONFIG2 0x11
-#define MAX86176_SYSTEMCONFIG3 0x12
-#define MAX86176_SYSTEMCONFIG4 0x13
-#define MAX86176_PHOTODIODE_BIAS 0x14
-#define MAX86176_PIN_FUNC_CONFIG 0x15
-#define MAX86176_OUTPUT_PINCONFIG 0x16
-#define MAX86176_I2C_BROADCAST_ADDR 0x17
+#define MAX86176_SYSTEMCONFIG1          0x10
+#define MAX86176_SYSTEMCONFIG2          0x11
+#define MAX86176_SYSTEMCONFIG3          0x12
+#define MAX86176_SYSTEMCONFIG4          0x13
+#define MAX86176_PHOTODIODE_BIAS        0x14
+#define MAX86176_PIN_FUNC_CONFIG        0x15
+#define MAX86176_OUTPUT_PINCONFIG       0x16
+#define MAX86176_I2C_BROADCAST_ADDR     0x17
 
 // PLL REGISTERS //
-#define MAX86176_PLL_CONFIG1 0x18
-#define MAX86176_PLL_CONFIG2 0x19
-#define MAX86176_PLL_CONFIG3 0x1A
+#define MAX86176_PLL_CONFIG1            0x18
+#define MAX86176_PLL_CONFIG2            0x19
+#define MAX86176_PLL_CONFIG3            0x1A
 
 // PPG FRAME RATE CLOCK //
-#define MAX86176_FR_CLOCKFREQSEL 0x1C
-#define MAX86176_FR_CLOCKDIV_MSB 0x1D
-#define MAX86176_FR_CLOCKDIV_LSB 0x1E
+#define MAX86176_FR_CLOCKFREQSEL        0x1C
+#define MAX86176_FR_CLOCKDIV_MSB        0x1D
+#define MAX86176_FR_CLOCKDIV_LSB        0x1E
 
 // PPG MEASUREMENT1 SETUP //
-#define MAX86176_MEAS1_SELECT 0x20
-#define MAX86176_MEAS1_CONFIG1 0x21
-#define MAX86176_MEAS1_CONFIG2 0x22
-#define MAX86176_MEAS1_CONFIG3 0x23
-#define MAX86176_MEAS1_CONFIG4 0x24
-#define MAX86176_MEAS1_LEDA_CURRENT 0x25
-#define MAX86176_MEAS1_LEDB_CURRENT 0x26
+#define MAX86176_MEAS1_SELECT           0x20
+#define MAX86176_MEAS1_CONFIG1          0x21
+#define MAX86176_MEAS1_CONFIG2          0x22
+#define MAX86176_MEAS1_CONFIG3          0x23
+#define MAX86176_MEAS1_CONFIG4          0x24
+#define MAX86176_MEAS1_LEDA_CURRENT     0x25
+#define MAX86176_MEAS1_LEDB_CURRENT     0x26
 
 // PPG MEASUREMENT2 SETUP //
-#define MAX86176_MEAS2_SELECT 0x28
-#define MAX86176_MEAS2_CONFIG1 0x29
-#define MAX86176_MEAS2_CONFIG2 0x2A
-#define MAX86176_MEAS2_CONFIG3 0x2B
-#define MAX86176_MEAS2_CONFIG4 0x2C
-#define MAX86176_MEAS2_LEDA_CURRENT 0x2D
-#define MAX86176_MEAS2_LEDB_CURRENT 0x2E
+#define MAX86176_MEAS2_SELECT           0x28
+#define MAX86176_MEAS2_CONFIG1          0x29
+#define MAX86176_MEAS2_CONFIG2          0x2A
+#define MAX86176_MEAS2_CONFIG3          0x2B
+#define MAX86176_MEAS2_CONFIG4          0x2C
+#define MAX86176_MEAS2_LEDA_CURRENT     0x2D
+#define MAX86176_MEAS2_LEDB_CURRENT     0x2E
 
 // PPG MEASUREMENT3 SETUP //
-#define MAX86176_MEAS3_SELECT 0x30
-#define MAX86176_MEAS3_CONFIG1 0x31
-#define MAX86176_MEAS3_CONFIG2 0x32
-#define MAX86176_MEAS3_CONFIG3 0x33
-#define MAX86176_MEAS3_CONFIG4 0x34
-#define MAX86176_MEAS3_LEDA_CURRENT 0x35
-#define MAX86176_MEAS3_LEDB_CURRENT 0x36
+#define MAX86176_MEAS3_SELECT           0x30
+#define MAX86176_MEAS3_CONFIG1          0x31
+#define MAX86176_MEAS3_CONFIG2          0x32
+#define MAX86176_MEAS3_CONFIG3          0x33
+#define MAX86176_MEAS3_CONFIG4          0x34
+#define MAX86176_MEAS3_LEDA_CURRENT     0x35
+#define MAX86176_MEAS3_LEDB_CURRENT     0x36
 
 // PPG MEASUREMENT4 SETUP //
-#define MAX86176_MEAS4_SELECT 0x38
-#define MAX86176_MEAS4_CONFIG1 0x39
-#define MAX86176_MEAS4_CONFIG2 0x3A
-#define MAX86176_MEAS4_CONFIG3 0x3B
-#define MAX86176_MEAS4_CONFIG4 0x3C
-#define MAX86176_MEAS4_LEDA_CURRENT 0x3D
-#define MAX86176_MEAS4_LEDB_CURRENT 0x3E
+#define MAX86176_MEAS4_SELECT           0x38
+#define MAX86176_MEAS4_CONFIG1          0x39
+#define MAX86176_MEAS4_CONFIG2          0x3A
+#define MAX86176_MEAS4_CONFIG3          0x3B
+#define MAX86176_MEAS4_CONFIG4          0x3C
+#define MAX86176_MEAS4_LEDA_CURRENT     0x3D
+#define MAX86176_MEAS4_LEDB_CURRENT     0x3E
 
 // PPG MEASUREMENT5 SETUP //
-#define MAX86176_MEAS5_SELECT 0x40
-#define MAX86176_MEAS5_CONFIG1 0x41
-#define MAX86176_MEAS5_CONFIG2 0x42
-#define MAX86176_MEAS5_CONFIG3 0x43
-#define MAX86176_MEAS5_CONFIG4 0x44
-#define MAX86176_MEAS5_LEDA_CURRENT 0x45
-#define MAX86176_MEAS5_LEDB_CURRENT 0x46
+#define MAX86176_MEAS5_SELECT           0x40
+#define MAX86176_MEAS5_CONFIG1          0x41
+#define MAX86176_MEAS5_CONFIG2          0x42
+#define MAX86176_MEAS5_CONFIG3          0x43
+#define MAX86176_MEAS5_CONFIG4          0x44
+#define MAX86176_MEAS5_LEDA_CURRENT     0x45
+#define MAX86176_MEAS5_LEDB_CURRENT     0x46
 
 // PPG MEASUREMENT6 SETUP //
-#define MAX86176_MEAS6_SELECT 0x48
-#define MAX86176_MEAS6_CONFIG1 0x49
-#define MAX86176_MEAS6_CONFIG2 0x4A
-#define MAX86176_MEAS6_CONFIG3 0x4B
-#define MAX86176_MEAS6_CONFIG4 0x4C
-#define MAX86176_MEAS6_LEDA_CURRENT 0x4D
-#define MAX86176_MEAS6_LEDB_CURRENT 0x4E
+#define MAX86176_MEAS6_SELECT           0x48
+#define MAX86176_MEAS6_CONFIG1          0x49
+#define MAX86176_MEAS6_CONFIG2          0x4A
+#define MAX86176_MEAS6_CONFIG3          0x4B
+#define MAX86176_MEAS6_CONFIG4          0x4C
+#define MAX86176_MEAS6_LEDA_CURRENT     0x4D
+#define MAX86176_MEAS6_LEDB_CURRENT     0x4E
 
 // PPG MEASUREMENT7 SETUP //
-#define MAX86176_MEAS7_SELECT 0x50
-#define MAX86176_MEAS7_CONFIG1 0x51
-#define MAX86176_MEAS7_CONFIG2 0x52
-#define MAX86176_MEAS7_CONFIG3 0x53
-#define MAX86176_MEAS7_CONFIG4 0x54
-#define MAX86176_MEAS7_LEDA_CURRENT 0x55
-#define MAX86176_MEAS7_LEDB_CURRENT 0x56
+#define MAX86176_MEAS7_SELECT           0x50
+#define MAX86176_MEAS7_CONFIG1          0x51
+#define MAX86176_MEAS7_CONFIG2          0x52
+#define MAX86176_MEAS7_CONFIG3          0x53
+#define MAX86176_MEAS7_CONFIG4          0x54
+#define MAX86176_MEAS7_LEDA_CURRENT     0x55
+#define MAX86176_MEAS7_LEDB_CURRENT     0x56
 
 // PPG MEASUREMENT8 SETUP //
-#define MAX86176_MEAS8_SELECT 0x58
-#define MAX86176_MEAS8_CONFIG1 0x59
-#define MAX86176_MEAS8_CONFIG2 0x5A
-#define MAX86176_MEAS8_CONFIG3 0x5B
-#define MAX86176_MEAS8_CONFIG4 0x5C
-#define MAX86176_MEAS8_LEDA_CURRENT 0x5D
-#define MAX86176_MEAS8_LEDB_CURRENT 0x5E
+#define MAX86176_MEAS8_SELECT           0x58
+#define MAX86176_MEAS8_CONFIG1          0x59
+#define MAX86176_MEAS8_CONFIG2          0x5A
+#define MAX86176_MEAS8_CONFIG3          0x5B
+#define MAX86176_MEAS8_CONFIG4          0x5C
+#define MAX86176_MEAS8_LEDA_CURRENT     0x5D
+#define MAX86176_MEAS8_LEDB_CURRENT     0x5E
 
 // PPG MEASUREMENT9 SETUP //
-#define MAX86176_MEAS9_SELECT 0x60
-#define MAX86176_MEAS9_CONFIG1 0x61
-#define MAX86176_MEAS9_CONFIG2 0x62
-#define MAX86176_MEAS9_CONFIG3 0x63
-#define MAX86176_MEAS9_CONFIG4 0x64
-#define MAX86176_MEAS9_LEDA_CURRENT 0x65
-#define MAX86176_MEAS9_LEDB_CURRENT 0x66
+#define MAX86176_MEAS9_SELECT           0x60
+#define MAX86176_MEAS9_CONFIG1          0x61
+#define MAX86176_MEAS9_CONFIG2          0x62
+#define MAX86176_MEAS9_CONFIG3          0x63
+#define MAX86176_MEAS9_CONFIG4          0x64
+#define MAX86176_MEAS9_LEDA_CURRENT     0x65
+#define MAX86176_MEAS9_LEDB_CURRENT     0x66
 
 // INTERRUPT ENABLE REGISTERS //
-#define MAX86176_INTR1_ENABLE1 0x80
-#define MAX86176_INTR1_ENABLE2 0x81
-#define MAX86176_INTR1_ENABLE3 0x82
-#define MAX86176_INTR1_ENABLE4 0x83
-#define MAX86176_INTR1_ENABLE5 0x84
-#define MAX86176_INTR1_ENABLE6 0x85
-#define MAX86176_INTR2_ENABLE1 0x86
-#define MAX86176_INTR2_ENABLE2 0x87
-#define MAX86176_INTR2_ENABLE3 0x88
-#define MAX86176_INTR2_ENABLE4 0x89
-#define MAX86176_INTR2_ENABLE5 0x8A
-#define MAX86176_INTR2_ENABLE6 0x8B
+#define MAX86176_INTR1_ENABLE1          0x80
+#define MAX86176_INTR1_ENABLE2          0x81
+#define MAX86176_INTR1_ENABLE3          0x82
+#define MAX86176_INTR1_ENABLE4          0x83
+#define MAX86176_INTR1_ENABLE5          0x84
+#define MAX86176_INTR1_ENABLE6          0x85
+#define MAX86176_INTR2_ENABLE1          0x86
+#define MAX86176_INTR2_ENABLE2          0x87
+#define MAX86176_INTR2_ENABLE3          0x88
+#define MAX86176_INTR2_ENABLE4          0x89
+#define MAX86176_INTR2_ENABLE5          0x8A
+#define MAX86176_INTR2_ENABLE6          0x8B
 
 /* Private variables ---------------------------------------------------------*/
 static mxc_spi_regs_t *spiHandle = NULL;
 
 static int32_t lastLeadOffI = MAX86176_LEADOFF_INIT_MAGNITUDE;
 static int32_t lastLeadOffQ = MAX86176_LEADOFF_INIT_MAGNITUDE;
-static uint8_t lastLeadOffStatus = 1; // assume "lead off" until the first AC_LOFF read
+static uint8_t lastLeadOffStatus = 1;  // assume "lead off" until the first AC_LOFF read
 
 // Decode tables for the fields above
 static const uint8_t pgaGain[8] = {1, 2, 4, 8, 0, 0, 0, 16};
 static const uint8_t inaGain[4] = {20, 30, 40, 60};
-
 
 static int readReg(uint8_t reg, uint8_t *value)
 {
@@ -409,13 +408,10 @@ int8_t MAX86176_configureECGChannel(void)
 uint32_t MAX86176_convertMicroVoltToADC(uint32_t microVolt)
 {
     uint64_t temp;
-    uint32_t totalGain = (uint32_t)pgaGain[MAX86176_ECG_PGA_GAIN_FIELD] *
-                          inaGain[MAX86176_ECG_INA_GAIN_FIELD];
+    uint32_t totalGain = (uint32_t)pgaGain[MAX86176_ECG_PGA_GAIN_FIELD] * inaGain[MAX86176_ECG_INA_GAIN_FIELD];
 
     // ADC_Count = (uV * MaxCounts * TotalGain) / Vref_uV
-    temp = (uint64_t)microVolt *
-           MAX86176_ECG_ADC_MAX_COUNT *
-           totalGain;
+    temp = (uint64_t)microVolt * MAX86176_ECG_ADC_MAX_COUNT * totalGain;
 
     temp /= MAX86176_ECG_VREF_uV;
 
@@ -496,7 +492,7 @@ static int readDeviceID(void)
     else
     {
         NAQILOG_ERROR("Error Reading ID (Read: 0x%02X)", part_id);
-        return E_COMM_ERR; // Device ID mismatch
+        return E_COMM_ERR;  // Device ID mismatch
     }
 }
 
@@ -573,11 +569,11 @@ void MAX86176_stopAcquisition(void)
 
 int8_t MAX86176_readSample(int32_t *sample)
 {
-    uint8_t fifoCounter1, fifoCounter2;
-    uint8_t overflowCount;
+    uint8_t  fifoCounter1, fifoCounter2;
+    uint8_t  overflowCount;
     uint16_t fifoSampleCount;
-    uint8_t dataBuffer[MAX86176_SAMPLE_SIZE];
-    uint8_t header, sampleMsb;
+    uint8_t  dataBuffer[MAX86176_SAMPLE_SIZE];
+    uint8_t  header, sampleMsb;
     uint32_t rawSample;
 
     if (spiHandle == NULL)
@@ -616,7 +612,7 @@ int8_t MAX86176_readSample(int32_t *sample)
     if ((header & EXG_TAG_MASK) == EXG_TAG_LEADOFF_I || (header & EXG_TAG_MASK) == EXG_TAG_LEADOFF_Q)
     {
         uint32_t rawLeadOff = ((uint32_t)(dataBuffer[1] & 0x0F) << 8) | dataBuffer[2];
-        int32_t leadOffValue = (int32_t)((rawLeadOff ^ MAX86176_LEADOFF_SIGN_BIT) - MAX86176_LEADOFF_SIGN_BIT);
+        int32_t  leadOffValue = (int32_t)((rawLeadOff ^ MAX86176_LEADOFF_SIGN_BIT) - MAX86176_LEADOFF_SIGN_BIT);
 
         // Cache lead off
         if ((header & EXG_TAG_MASK) == EXG_TAG_LEADOFF_I)

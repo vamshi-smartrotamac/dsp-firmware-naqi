@@ -8,8 +8,8 @@
 #ifndef SPI_TEST_H_
 #define SPI_TEST_H_
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include "spi.h"
 
 /**
@@ -29,7 +29,5 @@ int SPI_Read_Multibyte(mxc_spi_regs_t *spi, uint8_t reg, uint8_t *val, uint8_t s
  *
  */
 int SPI_Write(mxc_spi_regs_t *spi, uint8_t reg, uint8_t val);
-
-
 
 #endif /* SPI_TEST_H_ */

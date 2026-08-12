@@ -10,19 +10,19 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
-#include <string.h>
 #include <stdbool.h>
+#include <string.h>
 #include "FreeRTOS.h"
-#include "semphr.h"
 #include "queue.h"
+#include "semphr.h"
 #include "task.h"
 
-#include "ExGacquisition.h"
-#include "mxc_delay.h"
-#include "Communication.h"
 #include "ComInterface.h"
-#include "logger.h"
+#include "Communication.h"
+#include "ExGacquisition.h"
 #include "ExGacquisitionInterface.h"
+#include "logger.h"
+#include "mxc_delay.h"
 
 /* Private typedef -----------------------------------------------------------*/
 
@@ -31,11 +31,11 @@
 /* Private macro -------------------------------------------------------------*/
 
 /* Global variables ----------------------------------------------------------*/
-static TaskHandle_t acquisitionTaskHandle = NULL;
+static TaskHandle_t      acquisitionTaskHandle = NULL;
 static SemaphoreHandle_t readWriteMutexHandle = NULL;
-static uint16_t bufferSize = 0;
-static uint16_t currentIndex = 0;
-static int32_t *exgCircularBuffer = NULL;
+static uint16_t          bufferSize = 0;
+static uint16_t          currentIndex = 0;
+static int32_t          *exgCircularBuffer = NULL;
 
 /**
  * @brief Initialize AFE Acquisition
@@ -76,11 +76,11 @@ void Exg_acquireDataTask(void *pvParameters)
 {
     (void)pvParameters;
 
-    TickType_t xLastWakeTime;
-    int32_t sample;
+    TickType_t   xLastWakeTime;
+    int32_t      sample;
     ExGSamples_t txMessage;
-    uint16_t exgSampleCount = 0;
-    int8_t ret;
+    uint16_t     exgSampleCount = 0;
+    int8_t       ret;
 
     if (!exgCircularBuffer)
     {

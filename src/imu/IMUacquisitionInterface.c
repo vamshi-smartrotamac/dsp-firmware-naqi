@@ -4,21 +4,21 @@
  */
 
 #include "IMUacquisitionInterface.h"
-#include "bhi160.h"
-#include "i2c_driver.h"
-#include "board_init.h"
-#include "logger.h"
-#include "mxc_delay.h"
-#include "gpio.h"
-#include "nvic_table.h"
 #include <math.h>
 #include <string.h>
+#include "bhi160.h"
+#include "board_init.h"
+#include "gpio.h"
+#include "i2c_driver.h"
+#include "logger.h"
+#include "mxc_delay.h"
+#include "nvic_table.h"
 
 /* ── compile-time config ──────────────────────────────────────────────────── */
-#define SAMPLE_RATE 				50                  /* Hz — acc / gyr / quat */
-#define MAG_SAMPLE_RATE 			25                  /* Hz — half the acc/gyr/quat rate */
+#define SAMPLE_RATE                   50 /* Hz — acc / gyr / quat */
+#define MAG_SAMPLE_RATE               25 /* Hz — half the acc/gyr/quat rate */
 /* Non-zero latency batches samples instead of interrupting on every one */
-#define MAG_REPORT_LATENCY_MS 		(1000 * IMU_SAMPLE_COUNT / SAMPLE_RATE)
+#define MAG_REPORT_LATENCY_MS         (1000 * IMU_SAMPLE_COUNT / SAMPLE_RATE)
 
 /* bounds consecutive FIFO-overflow retries so a stuck sensor can't busy-spin this task */
 #define IMU_FIFO_OVERFLOW_RETRY_LIMIT 3
@@ -26,12 +26,12 @@
 /* ── quaternion fixed-point scaling ──────────────────────────────────────── */
 /* BHI160 outputs quaternion components as Q14 fixed-point integers:
  * the range [-16384, 16384] maps to the normalised range [-1.0, 1.0]. */
-#define BHI160_QUAT_SCALE 			16384.0f     /* 2^14 — Q14 fixed-point divisor  */
-#define BHI160_ACCURACY_SCALE 		16384.0f /* same encoding for estimated_accuracy */
+#define BHI160_QUAT_SCALE             16384.0f /* 2^14 — Q14 fixed-point divisor  */
+#define BHI160_ACCURACY_SCALE         16384.0f /* same encoding for estimated_accuracy */
 
 /* ── axis remapping matrices ──────────────────────────────────────────────── */
-static int8_t imu_mapping[3 * 3] = {0, 0, -1, 1, 0, 0, 0, -1, 0};
-static int8_t mag_mapping[3 * 3] = {0, 0, 1, 1, 0, 0, 0, 1, 0};
+static int8_t              imu_mapping[3 * 3] = {0, 0, -1, 1, 0, 0, 0, -1, 0};
+static int8_t              mag_mapping[3 * 3] = {0, 0, 1, 1, 0, 0, 0, 1, 0};
 extern const unsigned char bhy1_firmware[];
 
 /* ── quaternion helpers ───────────────────────────────────────────────────── */
@@ -42,7 +42,8 @@ extern const unsigned char bhy1_firmware[];
  *       This function is used to apply the mount-correction quaternion to the raw quaternion from the sensor.
  * @param a The first quaternion operand, representing the initial rotation.
  *        b The second quaternion operand, representing the rotation to be applied after a.
- * @return The product of the two quaternions, representing the combined rotation. The components are calculated using the standard quaternion multiplication formula
+ * @return The product of the two quaternions, representing the combined rotation. The components are calculated using
+ * the standard quaternion multiplication formula
  */
 static Quaternion quaternion_multiply(Quaternion a, Quaternion b)
 {
@@ -88,23 +89,23 @@ static bool handle_vector(bhy_data_generic_t *sample, ImuSampleEvent_t *out)
 
     switch (sample->data_vector.sensor_id)
     {
-    case VS_ID_ACCELEROMETER:
-    case VS_ID_ACCELEROMETER_WAKEUP:
-        out->type = IMU_SAMPLE_ACC;
-        out->vector = vector;
-        return true;
-    case VS_ID_GYROSCOPE:
-    case VS_ID_GYROSCOPE_WAKEUP:
-        out->type = IMU_SAMPLE_GYR;
-        out->vector = vector;
-        return true;
-    case VS_ID_MAGNETOMETER:
-    case VS_ID_MAGNETOMETER_WAKEUP:
-        out->type = IMU_SAMPLE_MAG;
-        out->vector = vector;
-        return true;
-    default:
-        return false;
+        case VS_ID_ACCELEROMETER:
+        case VS_ID_ACCELEROMETER_WAKEUP:
+            out->type = IMU_SAMPLE_ACC;
+            out->vector = vector;
+            return true;
+        case VS_ID_GYROSCOPE:
+        case VS_ID_GYROSCOPE_WAKEUP:
+            out->type = IMU_SAMPLE_GYR;
+            out->vector = vector;
+            return true;
+        case VS_ID_MAGNETOMETER:
+        case VS_ID_MAGNETOMETER_WAKEUP:
+            out->type = IMU_SAMPLE_MAG;
+            out->vector = vector;
+            return true;
+        default:
+            return false;
     }
 }
 
@@ -117,10 +118,10 @@ static bool handle_vector(bhy_data_generic_t *sample, ImuSampleEvent_t *out)
 static void handle_quaternion(bhy_data_generic_t *sample, ImuSampleEvent_t *out)
 {
     /* Convert Q14 fixed-point integers to normalised floats in [-1, 1]. */
-	float qw = sample->data_quaternion.w / BHI160_QUAT_SCALE;
-	float qx = sample->data_quaternion.x / BHI160_QUAT_SCALE;
-	float qy = sample->data_quaternion.y / BHI160_QUAT_SCALE;
-	float qz = sample->data_quaternion.z / BHI160_QUAT_SCALE;
+    float qw = sample->data_quaternion.w / BHI160_QUAT_SCALE;
+    float qx = sample->data_quaternion.x / BHI160_QUAT_SCALE;
+    float qy = sample->data_quaternion.y / BHI160_QUAT_SCALE;
+    float qz = sample->data_quaternion.z / BHI160_QUAT_SCALE;
 
     out->type = IMU_SAMPLE_QUAT;
     /* Apply the mount-correction quaternion (identity by default). */
@@ -150,23 +151,26 @@ static void handle_meta_event(bhy_data_generic_t *sample, ImuSampleEvent_t *out)
 
 int8_t ImuItf_deviceInit(mxc_i2c_regs_t *i2c_inst)
 {
-    int8_t result;
+    int8_t         result;
     mxc_gpio_cfg_t irq_pin = {
         .port = IMU_INTERRUPT_PORT,
         .mask = IMU_INTERRUPT_PIN,
     };
 
-    while (MXC_GPIO_InGet(irq_pin.port, irq_pin.mask) == 1);
+    while (MXC_GPIO_InGet(irq_pin.port, irq_pin.mask) == 1)
+        ;
 
     imuI2cInst = i2c_inst;
 
-    if (IMU_driver_init((uint8_t *)&bhy1_firmware, i2c_inst)) {
+    if (IMU_driver_init((uint8_t *)&bhy1_firmware, i2c_inst))
+    {
         NAQILOG_ERROR("IMU firmware upload failed\r");
         return -1;
     }
     MXC_Delay(MXC_DELAY_MSEC(BHY_FIRMWARE_BOOT_DELAY_MS));
 
-    while (MXC_GPIO_InGet(irq_pin.port, irq_pin.mask) == 1);
+    while (MXC_GPIO_InGet(irq_pin.port, irq_pin.mask) == 1)
+        ;
 
     result = bhy_mapping_matrix_set(i2c_inst, PHYSICAL_SENSOR_INDEX_ACC, imu_mapping);
     if (result)
@@ -180,23 +184,22 @@ int8_t ImuItf_deviceInit(mxc_i2c_regs_t *i2c_inst)
     if (result)
         NAQILOG_ERROR("GYRO mapping matrix failed: %d\r", result);
 
-    result = IMU_enable_virtual_sensor(i2c_inst, VS_TYPE_ACCELEROMETER,
-                                       VS_WAKEUP, SAMPLE_RATE, 0, VS_FLUSH_SINGLE, 1, 1);
+    result =
+        IMU_enable_virtual_sensor(i2c_inst, VS_TYPE_ACCELEROMETER, VS_WAKEUP, SAMPLE_RATE, 0, VS_FLUSH_SINGLE, 1, 1);
     if (result)
         NAQILOG_ERROR("Enable accelerometer failed: %d\r", result);
 
-    result = IMU_enable_virtual_sensor(i2c_inst, VS_TYPE_GYROSCOPE,
-                                       VS_WAKEUP, SAMPLE_RATE, 0, VS_FLUSH_SINGLE, 0, 0);
+    result = IMU_enable_virtual_sensor(i2c_inst, VS_TYPE_GYROSCOPE, VS_WAKEUP, SAMPLE_RATE, 0, VS_FLUSH_SINGLE, 0, 0);
     if (result)
         NAQILOG_ERROR("Enable gyroscope failed: %d\r", result);
 
-    result = IMU_enable_virtual_sensor(i2c_inst, VS_TYPE_GEOMAGNETIC_FIELD,
-                                       VS_WAKEUP, MAG_SAMPLE_RATE, MAG_REPORT_LATENCY_MS, VS_FLUSH_SINGLE, 0, 0);
+    result = IMU_enable_virtual_sensor(i2c_inst, VS_TYPE_GEOMAGNETIC_FIELD, VS_WAKEUP, MAG_SAMPLE_RATE,
+                                       MAG_REPORT_LATENCY_MS, VS_FLUSH_SINGLE, 0, 0);
     if (result)
         NAQILOG_ERROR("Enable magnetometer failed: %d\r", result);
 
-    result = IMU_enable_virtual_sensor(i2c_inst, VS_TYPE_ROTATION_VECTOR,
-                                       VS_WAKEUP, SAMPLE_RATE, 0, VS_FLUSH_SINGLE, 0, 0);
+    result =
+        IMU_enable_virtual_sensor(i2c_inst, VS_TYPE_ROTATION_VECTOR, VS_WAKEUP, SAMPLE_RATE, 0, VS_FLUSH_SINGLE, 0, 0);
     if (result)
         NAQILOG_ERROR("Enable rotation vector failed: %d\r", result);
 
@@ -219,7 +222,8 @@ static void imu_gpio_isr(void *cbdata)
      * otherwise it keeps re-firing and starves the FreeRTOS context switch (PendSV). */
     MXC_GPIO_DisableInt(IMU_INTERRUPT_PORT, IMU_INTERRUPT_PIN);
 
-    if (dataReadyCallback != NULL) {
+    if (dataReadyCallback != NULL)
+    {
         dataReadyCallback();
     }
 }
@@ -247,10 +251,12 @@ void ImuItf_enableDataReadyInterrupt(ImuInterruptCallback_t callback)
 /* Drains fresh FIFO bytes over I2C (bytes-remaining, then exactly that many
  * bytes) whenever the cursor's backlog has been fully parsed, then decodes
  * the next raw sample from it. */
-static int8_t readNextRawSample(mxc_i2c_regs_t *i2c_inst, bhy_data_generic_t *out,
-                                 bhy_data_type_t *out_type, bool *available)
+static int8_t readNextRawSample(mxc_i2c_regs_t     *i2c_inst,
+                                bhy_data_generic_t *out,
+                                bhy_data_type_t    *out_type,
+                                bool               *available)
 {
-    static uint8_t fifo_raw_buffer[BHY_FIFO_DATA_BUFFER];
+    static uint8_t      fifo_raw_buffer[BHY_FIFO_DATA_BUFFER];
     static FifoCursor_t fifo_cursor = {NULL, 0};
 
     *available = false;
@@ -300,10 +306,10 @@ static int8_t readNextRawSample(mxc_i2c_regs_t *i2c_inst, bhy_data_generic_t *ou
 bool ImuItf_readNextSample(ImuSampleEvent_t *out)
 {
     bhy_data_generic_t raw;
-    bhy_data_type_t type;
-    bool available;
-    static uint8_t fifoOverflowRetries = 0;
-    int8_t status = readNextRawSample(imuI2cInst, &raw, &type, &available);
+    bhy_data_type_t    type;
+    bool               available;
+    static uint8_t     fifoOverflowRetries = 0;
+    int8_t             status = readNextRawSample(imuI2cInst, &raw, &type, &available);
 
     if (status == BHY_DATA_LOST || status == BHY_OUT_OF_RANGE)
     {
@@ -342,19 +348,18 @@ bool ImuItf_readNextSample(ImuSampleEvent_t *out)
 
     switch (type)
     {
-    case BHY_DATA_TYPE_VECTOR:
-        handle_vector(&raw, out);
-        break;
-    case BHY_DATA_TYPE_QUATERNION:
-        handle_quaternion(&raw, out);
-        break;
-    case BHY_DATA_TYPE_META_EVENT:
-        handle_meta_event(&raw, out);
-        break;
-    default:
-        break;
+        case BHY_DATA_TYPE_VECTOR:
+            handle_vector(&raw, out);
+            break;
+        case BHY_DATA_TYPE_QUATERNION:
+            handle_quaternion(&raw, out);
+            break;
+        case BHY_DATA_TYPE_META_EVENT:
+            handle_meta_event(&raw, out);
+            break;
+        default:
+            break;
     }
 
     return true;
 }
-

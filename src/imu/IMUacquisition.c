@@ -8,26 +8,27 @@
  * @copyright Copyright (c) 2026
  *
  */
-#include <string.h>
 #include <limits.h>
+#include <string.h>
 
-#include "IMUacquisition.h"
-#include "IMUacquisitionInterface.h"
 #include "ComInterface.h"
 #include "FreeRTOS.h"
-#include "task.h"
+#include "IMUacquisition.h"
+#include "IMUacquisitionInterface.h"
 #include "logger.h"
+#include "task.h"
 
 /* Private define ------------------------------------------------------------*/
 #define IMU_DATA_READY_BIT (1UL << 0)
 
 /* Private typedef -------------------------------------------------------------*/
-typedef struct {
+typedef struct
+{
     ImuSamples_t batch;
-    uint8_t accCount;
-    uint8_t gyrCount;
-    uint8_t quatCount;
-    bool magReady;
+    uint8_t      accCount;
+    uint8_t      gyrCount;
+    uint8_t      quatCount;
+    bool         magReady;
 } ImuBatchAccumulator_t;
 
 /* Global variables ----------------------------------------------------------*/
@@ -44,43 +45,43 @@ static bool accumulateSample(ImuBatchAccumulator_t *acc, ImuSampleEvent_t sample
 {
     switch (sample.type)
     {
-    case IMU_SAMPLE_ACC:
-        if (acc->accCount < IMU_SAMPLE_COUNT)
-        {
-            acc->batch.acc[acc->accCount][0] = sample.vector.x;
-            acc->batch.acc[acc->accCount][1] = sample.vector.y;
-            acc->batch.acc[acc->accCount][2] = sample.vector.z;
-            acc->accCount++;
-        }
-        break;
-    case IMU_SAMPLE_GYR:
-        if (acc->gyrCount < IMU_SAMPLE_COUNT)
-        {
-            acc->batch.gyr[acc->gyrCount][0] = sample.vector.x;
-            acc->batch.gyr[acc->gyrCount][1] = sample.vector.y;
-            acc->batch.gyr[acc->gyrCount][2] = sample.vector.z;
-            acc->gyrCount++;
-        }
-        break;
-    case IMU_SAMPLE_MAG:
-        acc->batch.mag[0] = sample.vector.x;
-        acc->batch.mag[1] = sample.vector.y;
-        acc->batch.mag[2] = sample.vector.z;
-        acc->magReady = true;
-        break;
-    case IMU_SAMPLE_QUAT:
-        if (acc->quatCount < IMU_SAMPLE_COUNT)
-        {
-            acc->batch.quat[acc->quatCount] = sample.quaternion.orientation;
-            acc->batch.accuracy = sample.quaternion.accuracy;
-            acc->quatCount++;
-        }
-        break;
-    case IMU_SAMPLE_OVERFLOW:
-        memset(acc, 0, sizeof(*acc));
-        break;
-    default:
-        break;
+        case IMU_SAMPLE_ACC:
+            if (acc->accCount < IMU_SAMPLE_COUNT)
+            {
+                acc->batch.acc[acc->accCount][0] = sample.vector.x;
+                acc->batch.acc[acc->accCount][1] = sample.vector.y;
+                acc->batch.acc[acc->accCount][2] = sample.vector.z;
+                acc->accCount++;
+            }
+            break;
+        case IMU_SAMPLE_GYR:
+            if (acc->gyrCount < IMU_SAMPLE_COUNT)
+            {
+                acc->batch.gyr[acc->gyrCount][0] = sample.vector.x;
+                acc->batch.gyr[acc->gyrCount][1] = sample.vector.y;
+                acc->batch.gyr[acc->gyrCount][2] = sample.vector.z;
+                acc->gyrCount++;
+            }
+            break;
+        case IMU_SAMPLE_MAG:
+            acc->batch.mag[0] = sample.vector.x;
+            acc->batch.mag[1] = sample.vector.y;
+            acc->batch.mag[2] = sample.vector.z;
+            acc->magReady = true;
+            break;
+        case IMU_SAMPLE_QUAT:
+            if (acc->quatCount < IMU_SAMPLE_COUNT)
+            {
+                acc->batch.quat[acc->quatCount] = sample.quaternion.orientation;
+                acc->batch.accuracy = sample.quaternion.accuracy;
+                acc->quatCount++;
+            }
+            break;
+        case IMU_SAMPLE_OVERFLOW:
+            memset(acc, 0, sizeof(*acc));
+            break;
+        default:
+            break;
     }
 
     return acc->accCount >= IMU_SAMPLE_COUNT && acc->gyrCount >= IMU_SAMPLE_COUNT &&
@@ -115,8 +116,7 @@ static void imu_notifyDataReady(void)
 
     if (IMUAcquisitionHandle)
     {
-        xTaskNotifyFromISR(IMUAcquisitionHandle, IMU_DATA_READY_BIT, eSetBits,
-                            &xHigherPriorityTaskWoken);
+        xTaskNotifyFromISR(IMUAcquisitionHandle, IMU_DATA_READY_BIT, eSetBits, &xHigherPriorityTaskWoken);
     }
 
     portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
@@ -131,7 +131,7 @@ static void imu_notifyDataReady(void)
 void Imu_acquireDataTask(void *pvParameters)
 {
     ImuBatchAccumulator_t accumulator;
-    ImuSampleEvent_t sample;
+    ImuSampleEvent_t      sample;
 
     (void)pvParameters;
 

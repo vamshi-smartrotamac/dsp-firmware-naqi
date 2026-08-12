@@ -15,14 +15,14 @@
 
 #define ACQUISITION_TASK_NAME_EXG "ExgAcquisition"
 
-#define SAMPLES_PER_MESSAGE         8
+#define SAMPLES_PER_MESSAGE       8
 
 typedef struct
 {
-	int32_t data[SAMPLES_PER_MESSAGE];
-	int32_t leadOffI;
-	int32_t leadOffQ;
-	uint8_t leadOffStatus;
+    int32_t data[SAMPLES_PER_MESSAGE];
+    int32_t leadOffI;
+    int32_t leadOffQ;
+    uint8_t leadOffStatus;
 } ExGSamples_t;
 
 int8_t Exg_initializeAcquisitionAfe(uint16_t acquisitionBufferSizeAFE);

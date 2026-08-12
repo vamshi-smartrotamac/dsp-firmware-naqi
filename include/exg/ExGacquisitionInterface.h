@@ -12,8 +12,8 @@
 #ifndef EXG_ACQUISITION_INTERFACE_H
 #define EXG_ACQUISITION_INTERFACE_H
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 /**
  * @brief Configure the AFE with the required settings
@@ -64,8 +64,6 @@ void AfeItf_getLeadOffData(int32_t *iValue, int32_t *qValue, uint8_t *status);
  * @return true if peak-to-peak value of the input buffer exceeds the given
  * threshold (in microV), false otherwise
  */
-bool AfeItf_isThresholdReached(float *ptrDataBuffer, uint16_t bufferSize,
-                               uint32_t threshold);
+bool AfeItf_isThresholdReached(float *ptrDataBuffer, uint16_t bufferSize, uint32_t threshold);
 
-
-#endif // EXG_ACQUISITION_INTERFACE_H
+#endif  // EXG_ACQUISITION_INTERFACE_H

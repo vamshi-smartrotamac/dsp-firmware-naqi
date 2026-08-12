@@ -13,25 +13,25 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-#include "ExGacquisition.h"
 #include "Communication.h"
+#include "ExGacquisition.h"
+#include "GestureProcessing.h"
 #include "IMUacquisition.h"
 #include "SystemServices.h"
-#include "logger.h"
 #include "i2c_driver.h"
-#include "GestureProcessing.h"
+#include "logger.h"
 
 /* Private typedef -----------------------------------------------------------*/
 
 /* Private define ------------------------------------------------------------*/
 
 /* Private macro -------------------------------------------------------------*/
-#define COMMUNICATION_TASK_PRIO 2
+#define COMMUNICATION_TASK_PRIO   2
 #define IMU_ACQUISITION_TASK_PRIO 3
 #define EXG_ACQUISITION_TASK_PRIO 3
-#define PROCESSING_TASK_PRIO 4
+#define PROCESSING_TASK_PRIO      4
 
-#define SYS_STATE_BUFFER_SIZE 0x100
+#define SYS_STATE_BUFFER_SIZE     0x100
 
 /* Global variables ----------------------------------------------------------*/
 static TaskHandle_t imuAcquisitionHandle = NULL;
@@ -82,8 +82,8 @@ void Sys_start(void)
     /* Tasks creation */
     if (comInitStatus == 0)
     {
-        if (xTaskCreate(Com_task, COMMUNICATION_TASK_NAME, 0x200, NULL,
-                        tskIDLE_PRIORITY + COMMUNICATION_TASK_PRIO, &communicationHandle) != pdPASS)
+        if (xTaskCreate(Com_task, COMMUNICATION_TASK_NAME, 0x200, NULL, tskIDLE_PRIORITY + COMMUNICATION_TASK_PRIO,
+                        &communicationHandle) != pdPASS)
         {
             NAQILOG_ERROR("UART Communication task creation failed!\r");
         }
@@ -141,11 +141,12 @@ static void reportSystemState(void)
     else
     {
         vTaskList(systemStateBuffer);
-        NAQILOG_INFO("System state:\n"
-                     "Name          State   Priority  Stack  Num \n"
-                     "*******************************************\n"
-                     "%s",
-                     systemStateBuffer);
+        NAQILOG_INFO(
+            "System state:\n"
+            "Name          State   Priority  Stack  Num \n"
+            "*******************************************\n"
+            "%s",
+            systemStateBuffer);
     }
 }
 #endif /* DEBUG */

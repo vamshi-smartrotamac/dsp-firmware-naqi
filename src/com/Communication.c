@@ -11,31 +11,31 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "FreeRTOS.h"
-#include "task.h"
-#include "queue.h"
 #include "limits.h"
+#include "queue.h"
+#include "task.h"
 
-#include <stdio.h>
 #include <stdarg.h>
+#include <stdio.h>
 #include <string.h>
-#include "mxc_delay.h"
-#include "uart.h"
-#include "led.h"
-#include "mxc.h"
-#include "nvic_table.h"
 #include "Communication.h"
 #include "FirmwareUpgrade.h"
+#include "led.h"
 #include "logger.h"
+#include "mxc.h"
+#include "mxc_delay.h"
+#include "nvic_table.h"
+#include "uart.h"
 
 /* Private macros -----------------------------------------------------------*/
 #define NOTIFY_BIT_TX_DONE     (1UL << 0) /* set by txDMACallback         */
 #define NOTIFY_BIT_DFU_REQUEST (1UL << 1) /* set by readCallback on "fupgrade\r" match */
 
 /* Global variables ---------------------------------------------------------*/
-static uint8_t rxDMABuf[Rx_PACKET_SIZE_MAX]; // DMA destination (internal)
-static char rxBuff[Rx_PACKET_SIZE_MAX];
+static uint8_t rxDMABuf[Rx_PACKET_SIZE_MAX];  // DMA destination (internal)
+static char    rxBuff[Rx_PACKET_SIZE_MAX];
 
-static TaskHandle_t xCommunicationTaskHandle = NULL;
+static TaskHandle_t  xCommunicationTaskHandle = NULL;
 static QueueHandle_t xUARTQueue = NULL;
 
 static mxc_uart_req_t write_req;
@@ -57,13 +57,11 @@ static void readCallback(mxc_uart_req_t *req, int error)
 
     if (error == E_NO_ERROR)
     {
-
         memcpy((void *)rxBuff, rxDMABuf, req->rxCnt);
 
         if (Dfu_isRequested((const uint8_t *)rxBuff, req->rxCnt) && (xCommunicationTaskHandle != NULL))
         {
-            xTaskNotifyFromISR(xCommunicationTaskHandle, NOTIFY_BIT_DFU_REQUEST,
-                               eSetBits, &xHigherPriorityTaskWoken);
+            xTaskNotifyFromISR(xCommunicationTaskHandle, NOTIFY_BIT_DFU_REQUEST, eSetBits, &xHigherPriorityTaskWoken);
         }
 
         // Clear RX buffer for next reception (this works if FW upgrade fails)
@@ -94,8 +92,7 @@ static void txDMACallback(mxc_uart_req_t *req, int error)
          *   - Safe to call multiple times — bits accumulate, not overwritten.
          *   - Task clears the bit in xTaskNotifyWait().
          */
-        xTaskNotifyFromISR(xCommunicationTaskHandle, NOTIFY_BIT_TX_DONE,
-                           eSetBits, &xHigherPriorityTaskWoken);
+        xTaskNotifyFromISR(xCommunicationTaskHandle, NOTIFY_BIT_TX_DONE, eSetBits, &xHigherPriorityTaskWoken);
     }
 
     portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
@@ -238,7 +235,7 @@ int8_t Com_initialization(void)
 void Com_task(void *pvParameters)
 {
     ComTxMessage_t txMsg;
-    uint32_t ulNotifiedValue;
+    uint32_t       ulNotifiedValue;
     (void)pvParameters;
 
     NAQILOG_INFO("Comm task launched\r");
@@ -253,8 +250,7 @@ void Com_task(void *pvParameters)
     {
         if (xTaskNotifyWait(pdFALSE,   /* Don't clear bits on entry. */
                             ULONG_MAX, /* Clear all bits on exit. */
-                            &ulNotifiedValue,
-                            portMAX_DELAY) == pdPASS)
+                            &ulNotifiedValue, portMAX_DELAY) == pdPASS)
         {
             if (ulNotifiedValue & NOTIFY_BIT_DFU_REQUEST)
             {

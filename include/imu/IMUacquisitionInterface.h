@@ -7,11 +7,12 @@
 #ifndef IMU_ACQUISITION_INTERFACE_H_
 #define IMU_ACQUISITION_INTERFACE_H_
 
-#include "i2c.h"
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
+#include "i2c.h"
 
-typedef struct {
+typedef struct
+{
     float w;
     float x;
     float y;
@@ -20,15 +21,17 @@ typedef struct {
 
 #define IMU_SAMPLE_COUNT 2
 
-typedef struct {
+typedef struct
+{
     Quaternion quat[IMU_SAMPLE_COUNT];
-    int16_t acc[IMU_SAMPLE_COUNT][3];
-    int16_t gyr[IMU_SAMPLE_COUNT][3];
-    int16_t mag[3];
-    uint8_t accuracy;
+    int16_t    acc[IMU_SAMPLE_COUNT][3];
+    int16_t    gyr[IMU_SAMPLE_COUNT][3];
+    int16_t    mag[3];
+    uint8_t    accuracy;
 } ImuSamples_t;
 
-typedef enum {
+typedef enum
+{
     IMU_SAMPLE_NONE = 0, /* padding, or other unhandled sensor — ignore */
     IMU_SAMPLE_ACC,
     IMU_SAMPLE_GYR,
@@ -37,19 +40,23 @@ typedef enum {
     IMU_SAMPLE_OVERFLOW,
 } ImuSampleType_t;
 
-typedef struct {
+typedef struct
+{
     int16_t x;
     int16_t y;
     int16_t z;
 } ImuVector_t;
 
-typedef struct {
+typedef struct
+{
     ImuSampleType_t type;
-    union {
+    union
+    {
         ImuVector_t vector;
-        struct {
+        struct
+        {
             Quaternion orientation;
-            uint8_t accuracy;
+            uint8_t    accuracy;
         } quaternion;
     };
 } ImuSampleEvent_t;

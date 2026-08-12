@@ -1,0 +1,9 @@
+name: Preprocess PRs
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+# Labels PRs (feeds the changelog categories in the release action). Uses .github/labeler.yml.
+jobs:
+  labeler:
+    uses: vamshi-smartrotamac/max78000-ci-workflows/.github/workflows/label-pr.yml@main

@@ -13,11 +13,11 @@
 
 #ifdef DEBUG
 
-NaqiLogLevel_t eCurrentLogLevel = ACTIVE_LOG_LEVEL;
+NaqiLogLevel_t    eCurrentLogLevel = ACTIVE_LOG_LEVEL;
 const char *const apcLogLevelStringMap[] = {"DBG", "INF", "WAR", "ERR"};
 
-#ifdef LOG_COLOR_ENABLED
+    #ifdef LOG_COLOR_ENABLED
 const char *const apcLogLevelColorMap[] = {NAQILOG_CYAN, NAQILOG_WHITE, NAQILOG_YELLOW, NAQILOG_RED};
-#endif
+    #endif
 
-#endif // DEBUG
+#endif  // DEBUG

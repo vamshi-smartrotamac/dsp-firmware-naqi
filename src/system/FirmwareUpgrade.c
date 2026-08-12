@@ -13,20 +13,20 @@
 #include <string.h>
 
 #include "FreeRTOS.h"
-#include "task.h"
-#include "mxc_device.h"
-#include "uart.h"
 #include "dma.h"
 #include "flc.h"
-#include "nvic_table.h"
 #include "logger.h"
+#include "mxc_device.h"
+#include "nvic_table.h"
+#include "task.h"
+#include "uart.h"
 
 #include "FirmwareUpgrade.h"
 
 /* Private macros -----------------------------------------------------------*/
-#define FLASH_ERASE_PAGE_ADDR   (0x1007E000)    /* Last page of flash for upgrade command flag */
-#define FUPGRADE_CMD             "fupgrade\r"
-#define FUPGRADE_CMD_LEN         (sizeof(FUPGRADE_CMD) - 1)   /* exclude the C-string NUL terminator */
+#define FLASH_ERASE_PAGE_ADDR (0x1007E000) /* Last page of flash for upgrade command flag */
+#define FUPGRADE_CMD          "fupgrade\r"
+#define FUPGRADE_CMD_LEN      (sizeof(FUPGRADE_CMD) - 1) /* exclude the C-string NUL terminator */
 
 bool Dfu_isRequested(const uint8_t *buf, size_t len)
 {
@@ -39,8 +39,8 @@ void Dfu_trigger(void)
     MXC_UART_Shutdown(MXC_UART_GET_UART(0));
 
     // Stop DMA explicitly if used
-    MXC_DMA_Stop(0);   // DMA0
-    MXC_DMA_Stop(1);   // DMA1
+    MXC_DMA_Stop(0);  // DMA0
+    MXC_DMA_Stop(1);  // DMA1
 
     // Suspend scheduler
     vTaskSuspendAll();

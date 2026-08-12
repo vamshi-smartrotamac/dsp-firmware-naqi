@@ -1,12 +1,12 @@
 /**
  * @file IMUacquisition.h
  * @author pierre@wisear.io
- * @brief 
+ * @brief
  * @version 0.1
  * @date 2026-02-05
- * 
+ *
  * @copyright Copyright (c) 2026
- * 
+ *
  */
 #ifndef IMUACQUISITION_H
 #define IMUACQUISITION_H

@@ -1,16 +1,37 @@
-name: Build
+name: Compilation check
 on:
   pull_request:
+    types: [opened, synchronize, reopened]
 
 jobs:
   build:
     name: build
     runs-on: ubuntu-latest
+    permissions:
+      packages: read
+      contents: read
+    defaults:
+      run:
+        shell: bash
+    # Pulls the centrally-published MSDK toolchain image from max78000-ci-workflows.
+    # The image + reusable workflows live in vamshi-smartrotamac/max78000-ci-workflows
+    # (to be upstreamed to NaqiLogix/ci-workflows later).
+    container:
+      image: ghcr.io/vamshi-smartrotamac/max78000-toolchain:v2024_10
+      credentials:
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
-      - name: Build toolchain image
-        run: docker build -t dsp-firmware-sm-toolchain -f docker/max78000/Dockerfile .
-      - name: make (debug)
-        run: docker run --rm -v "$PWD":/work -w /work dsp-firmware-sm-toolchain make -j BOARD=FTHR_RevA
-      - name: make release
-        run: docker run --rm -v "$PWD":/work -w /work dsp-firmware-sm-toolchain make release BOARD=FTHR_RevA
+      - name: Set up cache
+        uses: vamshi-smartrotamac/max78000-ci-workflows/.github/actions/ccache-artifact-location@main
+        with:
+          files: |
+            **/*.h
+            **/*.c
+            **/*.cpp
+            **/*.cc
+      - name: Build (debug + release)
+        run: |
+          make -j BOARD=FTHR_RevA
+          make release BOARD=FTHR_RevA

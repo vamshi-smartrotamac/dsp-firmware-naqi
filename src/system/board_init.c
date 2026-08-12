@@ -11,10 +11,10 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "board_init.h"
+#include "IMUacquisition.h"
 #include "board.h"
 #include "logger.h"
 #include "mxc_errors.h"
-#include "IMUacquisition.h"
 
 /*
  *---------------------------------------------------------------------------------------------
@@ -36,7 +36,8 @@ void Gpio_initialization(void)
     };
 
     int err = MXC_GPIO_Config(&imu_interrupt_pin);
-    if (err != E_NO_ERROR) {
+    if (err != E_NO_ERROR)
+    {
         NAQILOG_ERROR("IMU interrupt pin config failed: %d\r", err);
     }
 }

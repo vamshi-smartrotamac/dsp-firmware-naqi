@@ -12,11 +12,11 @@
 #ifndef I2C_TEST_H_
 #define I2C_TEST_H_
 
-#include "board.h"
-#include "mxc.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include "board.h"
+#include "mxc.h"
 
 #define I2C_FREQ 1000000
 

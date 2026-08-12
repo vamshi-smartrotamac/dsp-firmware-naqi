@@ -12,9 +12,9 @@
 #ifndef INC_SYSTEM_FIRMWARE_UPGRADE_H
 #define INC_SYSTEM_FIRMWARE_UPGRADE_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <stdbool.h>
 
 /**
  * @brief Checks whether the received bytes match the firmware-upgrade trigger

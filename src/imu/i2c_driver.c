@@ -10,11 +10,10 @@
  **************************************************************************/
 
 #include "i2c_driver.h"
-#include "logger.h"
-#include "FreeRTOS.h"
-#include "task.h"
 #include <string.h>
-
+#include "FreeRTOS.h"
+#include "logger.h"
+#include "task.h"
 
 /*
  *---------------------------------------------------------------------------------------------
@@ -56,20 +55,14 @@ int I2C_Initialization(mxc_i2c_regs_t *i2c_inst)
  * 				 [In2] uint16_t dev_addr                	   (Device Address)
  * 				 [In3] uint8_t reg                			   (Register Address)
  * 				 [In4] uint8_t *val                			   (Value)
- * 				 [In5] uint8_t size							   (size of the Data)
- * return         Error code
+ * 				 [In5] uint8_t size							   (size of the
+ *Data) return         Error code
  *  ---------------------------------------------------------------------------------------------
  */
 int I2C_write(mxc_i2c_regs_t *i2c_inst, uint16_t dev_addr, uint8_t reg, uint8_t *val, uint8_t size)
 {
-    uint8_t buf[size + 1];
-    mxc_i2c_req_t i2c_req = {
-        .i2c = i2c_inst,
-        .addr = dev_addr,
-        .rx_len = 0,
-        .callback = NULL,
-        .restart = 0
-    };
+    uint8_t       buf[size + 1];
+    mxc_i2c_req_t i2c_req = {.i2c = i2c_inst, .addr = dev_addr, .rx_len = 0, .callback = NULL, .restart = 0};
 
     if (!val)
     {
@@ -96,22 +89,20 @@ int I2C_write(mxc_i2c_regs_t *i2c_inst, uint16_t dev_addr, uint8_t reg, uint8_t 
  * 				 [In2] uint16_t dev_addr                	   (Device Address)
  * 				 [In3] uint8_t reg                			   (Register Address)
  * 				 [In4] uint8_t *val                			   (Value)
- * 				 [In5] uint8_t size							   (size of the Data)
- * return         Error code
+ * 				 [In5] uint8_t size							   (size of the
+ *Data) return         Error code
  *  ---------------------------------------------------------------------------------------------
  */
 int I2C_read(mxc_i2c_regs_t *i2c_inst, uint16_t dev_addr, uint8_t reg, uint8_t *dat, uint32_t size)
 {
-    mxc_i2c_req_t i2c_req = {
-        .i2c = i2c_inst,
-        .addr = dev_addr,
-        .tx_buf = &reg,
-        .tx_len = 1,
-        .rx_buf = dat,
-        .rx_len = size,
-        .callback = NULL,
-        .restart = 0
-    };
+    mxc_i2c_req_t i2c_req = {.i2c = i2c_inst,
+                             .addr = dev_addr,
+                             .tx_buf = &reg,
+                             .tx_len = 1,
+                             .rx_buf = dat,
+                             .rx_len = size,
+                             .callback = NULL,
+                             .restart = 0};
 
     if (!dat)
     {

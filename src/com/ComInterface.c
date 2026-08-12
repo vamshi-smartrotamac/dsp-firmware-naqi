@@ -10,36 +10,47 @@
  **************************************************************************/
 
 /* Includes ------------------------------------------------------------------*/
-#include <string.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "ComInterface.h"
 #include "GestureProcessing.h"
 
 /* Global variables ---------------------------------------------------------*/
-typedef struct __attribute__((__packed__)) {
-    uint8_t type;
-    uint8_t num;
-    int32_t exg[SAMPLES_PER_MESSAGE];
-    uint8_t lead_off_status;
-    int32_t I_value;
-    int32_t Q_value;
-    uint8_t gesture_out;
+typedef struct __attribute__((__packed__))
+{
+    uint8_t  type;
+    uint8_t  num;
+    int32_t  exg[SAMPLES_PER_MESSAGE];
+    uint8_t  lead_off_status;
+    int32_t  I_value;
+    int32_t  Q_value;
+    uint8_t  gesture_out;
     uint32_t checksum;
 } PacketExg_t;
 
-typedef struct __attribute__((__packed__)) {
+typedef struct __attribute__((__packed__))
+{
     uint8_t type;
     uint8_t num;
     uint8_t calib_status;
-    struct {
+    struct
+    {
         float x, y, z, w;
     } quat[IMU_SAMPLE_COUNT];
-    struct {
-        struct { int16_t x, y, z; } acc;
-        struct { int16_t x, y, z; } gyr;
+    struct
+    {
+        struct
+        {
+            int16_t x, y, z;
+        } acc;
+        struct
+        {
+            int16_t x, y, z;
+        } gyr;
     } motion[IMU_SAMPLE_COUNT];
-    struct {
+    struct
+    {
         int16_t x, y, z;
     } mag;
     uint32_t checksum;
@@ -61,10 +72,11 @@ _Static_assert(sizeof(PacketImu_t) <= COM_TX_PACKET_MAX_SIZE, "PacketImu_t excee
  */
 static uint32_t compute_checksum(const void *data, size_t len)
 {
-    uint32_t checksum = 0;
+    uint32_t       checksum = 0;
     const uint8_t *bytes = data;
 
-    for (size_t i = 0; i < len; i++) {
+    for (size_t i = 0; i < len; i++)
+    {
         checksum += bytes[i];
     }
 
@@ -75,7 +87,7 @@ int ComItf_sendExgData(ExGSamples_t *msg)
 {
     static uint8_t packet_num = 0;
     ComTxMessage_t txMsg;
-    PacketExg_t   *pkt = (PacketExg_t *) txMsg.data;
+    PacketExg_t   *pkt = (PacketExg_t *)txMsg.data;
 
     memset(pkt, 0, sizeof(PacketExg_t));
 
@@ -101,7 +113,7 @@ int ComItf_sendImuData(ImuSamples_t *msg)
 {
     static uint8_t packet_num = 0;
     ComTxMessage_t txMsg;
-    PacketImu_t   *pkt = (PacketImu_t *) txMsg.data;
+    PacketImu_t   *pkt = (PacketImu_t *)txMsg.data;
 
     memset(pkt, 0, sizeof(PacketImu_t));
 

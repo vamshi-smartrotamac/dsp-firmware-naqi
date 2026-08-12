@@ -24,11 +24,11 @@
 #include <stdio.h>
 
 #include "FreeRTOS.h"
+#include "logger.h"
+#include "mxc.h"
+#include "nvic_table.h"
 #include "task.h"
 #include "tmr.h"
-#include "nvic_table.h"
-#include "mxc.h"
-#include "logger.h"
 
 /* ===========================================================================
  * RTOS run-time stats timer
@@ -58,7 +58,7 @@
  * EXAMPLE: APB clock source with 2048 prescale -> 2^32 / 32000 = ~93 days.
  * ===========================================================================*/
 
-#define RTOS_STATS_TMR MXC_TMR0
+#define RTOS_STATS_TMR     MXC_TMR0
 #define RTOS_STATS_TMR_SRC MXC_TMR_32K_CLK
 #define RTOS_STATS_TMR_CNT 0xFFFFFFFF
 
@@ -72,7 +72,7 @@ void ConfigTimerForStats(void)
     tmr.mode = TMR_MODE_CONTINUOUS;
     tmr.bitMode = MXC_TMR_BIT_MODE_32;
     tmr.clock = RTOS_STATS_TMR_SRC;
-    tmr.cmp_cnt = RTOS_STATS_TMR_CNT; // SystemCoreClock*(1/interval_time);
+    tmr.cmp_cnt = RTOS_STATS_TMR_CNT;  // SystemCoreClock*(1/interval_time);
     tmr.pol = 0;
     MXC_TMR_Init(RTOS_STATS_TMR, &tmr, true);
 
@@ -102,10 +102,10 @@ void prvGetRegistersFromStack(uint32_t *pulFaultStackAddress)
     volatile uint32_t r2;
     volatile uint32_t r3;
     volatile uint32_t r12;
-    volatile uint32_t lr; /* Link register. */
-    volatile uint32_t pc; /* Program counter. */
-    volatile uint32_t cfsr; /* Configurable Fault Status Register (MemManage/Bus/Usage). */
-    volatile uint32_t psr; /* Program status register. */
+    volatile uint32_t lr;    /* Link register. */
+    volatile uint32_t pc;    /* Program counter. */
+    volatile uint32_t cfsr;  /* Configurable Fault Status Register (MemManage/Bus/Usage). */
+    volatile uint32_t psr;   /* Program status register. */
     volatile uint32_t hfsr;  /* HardFault Status Register. */
     volatile uint32_t mmfar; /* MemManage Fault Address Register. */
     volatile uint32_t bfar;  /* BusFault Address Register. */
@@ -153,14 +153,15 @@ void HardFault_Handler(void) __attribute__((naked, aligned(8)));
 prvGetRegistersFromStack(). */
 void HardFault_Handler(void)
 {
-    __asm volatile(" tst lr, #4                                                \n"
-                   " ite eq                                                    \n"
-                   " mrseq r0, msp                                             \n"
-                   " mrsne r0, psp                                             \n"
-                   " ldr r1, [r0, #24]                                         \n"
-                   " ldr r2, handler2_address_const                            \n"
-                   " bx r2                                                     \n"
-                   " handler2_address_const: .word prvGetRegistersFromStack    \n");
+    __asm volatile(
+        " tst lr, #4                                                \n"
+        " ite eq                                                    \n"
+        " mrseq r0, msp                                             \n"
+        " mrsne r0, psp                                             \n"
+        " ldr r1, [r0, #24]                                         \n"
+        " ldr r2, handler2_address_const                            \n"
+        " bx r2                                                     \n"
+        " handler2_address_const: .word prvGetRegistersFromStack    \n");
 }
 #endif
 
