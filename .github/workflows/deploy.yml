@@ -1,0 +1,42 @@
+name: Deploy release
+on:
+  push:
+    tags:
+      # semver tags without a leading 'v' (matches the org pattern / devkit-firmware).
+      - '[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  deploy:
+    name: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: read
+    defaults:
+      run:
+        shell: bash
+    container:
+      image: ghcr.io/vamshi-smartrotamac/max78000-toolchain:v2024_10
+      credentials:
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build release
+        run: |
+          make release BOARD=FTHR_RevA
+          arm-none-eabi-objcopy build/max78000.elf -O binary build/max78000.bin
+      # Publish with softprops directly (same as auto-release.yml). softprops
+      # handles multi-line `files:` natively, so the three artifacts attach
+      # correctly. (The shared create-github-release action mangles multi-line
+      # file lists, which is what failed on 0.1.0/0.1.1.)
+      - name: Publish GitHub release with artifacts
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            build/max78000.elf
+            build/max78000.bin
+            build/max78000.hex
