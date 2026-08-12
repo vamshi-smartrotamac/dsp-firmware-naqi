@@ -10,9 +10,8 @@ jobs:
     name: release
     runs-on: ubuntu-latest
     permissions:
-      packages: read
       contents: write
-      pull-requests: read
+      packages: read
     defaults:
       run:
         shell: bash
@@ -27,12 +26,17 @@ jobs:
         run: |
           make release BOARD=FTHR_RevA
           arm-none-eabi-objcopy build/max78000.elf -O binary build/max78000.bin
-      - name: Publish GitHub release and changelog
-        uses: vamshi-smartrotamac/max78000-ci-workflows/.github/actions/create-github-release@main
+      # Publish with softprops directly (same as auto-release.yml). softprops
+      # handles multi-line `files:` natively, so the three artifacts attach
+      # correctly. (The shared create-github-release action mangles multi-line
+      # file lists, which is what failed on 0.1.0/0.1.1.)
+      - name: Publish GitHub release with artifacts
+        uses: softprops/action-gh-release@v2
         with:
-          # Single-line brace glob: the shared create-github-release action's
-          # resolve-files step only handles a single-line files value (a plain
-          # echo to GITHUB_OUTPUT breaks on multi-line). This one glob matches
-          # all three artifacts.
-          files: build/max78000.{elf,bin,hex}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            build/max78000.elf
+            build/max78000.bin
+            build/max78000.hex

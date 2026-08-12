@@ -35,7 +35,7 @@
 int main(void)
 {
     /* Delay to prevent bricks */
-    for (volatile int idx = 0; idx < 0xFFFFFF; idx++)
+    for (volatile int i = 0; i < 0xFFFFFF; i++)
         ;
 
     Gpio_initialization();
