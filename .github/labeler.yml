@@ -1,0 +1,8 @@
+# Config for srvaroa/labeler (used by ci-workflows label-pr.yml).
+# Labels drive the changelog categories in create-github-release (Feature / Fix).
+version: 1
+labels:
+  - label: "Feature"
+    branch: '^(feat|feature)/.*'
+  - label: "Fix"
+    branch: '^(fix|bugfix|hotfix)/.*'
