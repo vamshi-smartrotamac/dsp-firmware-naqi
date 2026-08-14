@@ -1,0 +1,39 @@
+name: Deploy release
+on:
+  push:
+    tags:
+      # semver tags without a leading 'v' (matches the org pattern / devkit-firmware).
+      - '[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  deploy:
+    name: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+      packages: read
+    defaults:
+      run:
+        shell: bash
+    container:
+      image: ghcr.io/vamshi-smartrotamac/max78000-toolchain:v2024_10
+      credentials:
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build release
+        run: |
+          make release BOARD=FTHR_RevA
+          arm-none-eabi-objcopy build/max78000.elf -O binary build/max78000.bin
+      # Publish via the shared create-github-release action (devkit-firmware style):
+      # builds a changelog from Feature/Fix PR labels and attaches the artifacts.
+      - name: Publish GitHub release and changelog
+        uses: vamshi-smartrotamac/max78000-ci-workflows/.github/actions/create-github-release@main
+        with:
+          files: |
+            build/max78000.elf
+            build/max78000.bin
+            build/max78000.hex
+          github_token: ${{ secrets.GITHUB_TOKEN }}

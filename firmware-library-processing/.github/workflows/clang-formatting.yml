@@ -1,0 +1,10 @@
+name: clang-format Check
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+jobs:
+  formatting-check:
+    uses: Wisear/ci-workflows/.github/workflows/firmware-clang-format-check.yml@master
+    with:
+      check-paths: "(src|processing)"
+      exclude-regex: "processing/models/*"
